@@ -1,0 +1,60 @@
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build Windows companion
+        shell: pwsh
+        run: dotnet publish companion/windows/PremiereBindCompanion.csproj -c Release -r win-x64 --self-contained true -o dist/windows/helper
+      - name: Build Windows installer
+        shell: pwsh
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/windows/PremiereBind.iss'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PremiereBind-Windows
+          path: dist/PremiereBind-1.0.0-Windows-x64-Setup.exe
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal macOS installer
+        run: |
+          chmod +x companion/macos/build.sh installer/macos/scripts/postinstall
+          companion/macos/build.sh
+          lipo -archs "dist/macos/root/Applications/PremiereBind Companion.app/Contents/MacOS/PremiereBindCompanion"
+          pkgutil --check-signature dist/PremiereBind-1.0.0-macOS-Universal.pkg || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PremiereBind-macOS-Universal
+          path: dist/PremiereBind-1.0.0-macOS-Universal.pkg
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          body: |
+            PremiereBind 1.0.0 installers for Windows and macOS.
+
+            macOS: the installer is unsigned. If macOS blocks it, open System Settings → Privacy & Security, click Open Anyway, then open the installer again. On first launch, approve PremiereBind Companion under Privacy & Security → Accessibility when macOS asks; this enables global shortcuts and native timeline copy/paste. Everything else is automatic.

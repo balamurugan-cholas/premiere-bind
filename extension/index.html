@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' blob: file:; connect-src http://127.0.0.1:8094 ws://127.0.0.1:50900">
+  <title>PremiereBind</title>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <button class="profile" data-profile-menu aria-haspopup="menu" aria-expanded="false"><strong id="profile-name">Profile 1</strong><svg class="profile-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m3.25 4.75 2.75 2.5 2.75-2.5"/></svg></button>
+      <div class="nav-label folder-heading">FOLDERS<button class="icon-button" data-dialog="folder" aria-label="New folder">+</button></div>
+      <nav id="folders" aria-label="Selection folders"></nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-view="markers"><i data-icon="marker"></i><span>Markers</span><span class="tiny-tag">6</span></button>
+        <button class="nav-item" data-view="settings"><i data-icon="settings"></i><span>Settings</span></button>
+      </div>
+    </aside>
+    <main>
+      <header class="topbar"><h1 id="library-title"></h1><div class="topbar-actions"><div id="folder-preset-actions" class="folder-preset-actions" hidden><button class="topbar-icon folder-shuffle-toggle" data-folder-shuffle aria-label="Toggle folder shuffle" title="Random order"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3c5 0 6 10 11 10h2M17 14l3 3-3 3M4 17h3c2 0 3-2 4-4M14 9c1-1 2-2 4-2h2M17 4l3 3-3 3"/></svg></button><button class="topbar-icon folder-preset-insert" data-folder-insert aria-label="Insert a Random Preset" title="Insert a Random Preset"><i data-icon="plus"></i></button></div><div class="snap-control"><button class="topbar-icon snap-main" data-snap-toggle aria-label="Toggle Live Play Snap" title="Toggle Live Play Snap"><i data-icon="play"></i></button><button class="topbar-icon snap-chevron" data-snap-menu aria-label="Live Play Snap settings" title="Live Play Snap settings" aria-expanded="false"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg></button></div><div id="snap-dropdown" class="snap-dropdown" hidden></div><button class="topbar-icon save-selection-icon" data-dialog="save" aria-label="Save selection" title="Save selection"><i data-icon="save"></i></button></div></header>
+      <section id="library-view" class="view library-view">
+        <div class="library-toolbar"><label class="search"><i data-icon="search"></i><input id="search" type="search" placeholder="Search selections…" aria-label="Search selections"><kbd>⇧ F</kbd></label><div class="sort-control"><input id="sort" type="hidden" value="recent"><button class="sort-trigger" data-sort-menu type="button" aria-label="Sort selections" aria-expanded="false"><span>Recently added</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg></button></div><div class="segmented view-toggle" aria-label="Display mode"><button class="active icon-button" data-layout="grid" aria-label="Grid view" aria-pressed="true"><i data-icon="grid"></i></button><button class="icon-button" data-layout="list" aria-label="List view" aria-pressed="false"><i data-icon="list"></i></button></div></div>
+        <span id="result-count" hidden></span>
+        <div id="cards" class="cards"></div>
+        <div id="empty" class="empty" hidden><i data-icon="search"></i><h2>No selections found</h2><p>Try another name or choose a different folder.</p><button class="button" id="reset-search">Clear search</button></div>
+      </section>
+      <section id="markers-view" class="view" hidden></section>
+      <section id="settings-view" class="view" hidden></section>
+      <footer id="library-footer" class="footer"><span id="operation-status" class="operation-status" role="status" aria-live="polite"></span><label class="size-control" title="Card size"><input id="card-size" type="range" min="110" max="210" value="140" aria-label="Card size"></label></footer>
+    </main>
+  </div>
+  <div id="modal-layer" class="modal-layer" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><header><h2 id="dialog-title"></h2><button class="icon-button" data-close aria-label="Close dialog"><i data-icon="close"></i></button></header><div id="dialog-body"></div><footer><button class="button" data-close>Cancel</button><button id="dialog-action" class="button primary">Save</button></footer></section></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <div id="snap-option-popover" class="snap-option-popover" hidden></div>
+  <div id="sort-option-popover" class="sort-option-popover" hidden></div>
+  <div id="insert-option-popover" class="insert-option-popover" hidden></div>
+  <div id="profile-popover" class="profile-popover" hidden></div>
+  <script src="lib/CSInterface.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/bridge.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/profiles.js"></script>
+  <script src="js/folders.js"></script>
+  <script src="js/save-selection.js"></script>
+  <script src="js/library-view.js"></script>
+  <script src="js/media-preview.js"></script>
+  <script src="js/selections.js"></script>
+  <script src="js/randomizers.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/shortcuts.js"></script>
+  <script src="js/insert-selection.js"></script>
+  <script src="js/folder-presets.js"></script>
+  <script src="js/companion.js"></script>
+  <script src="js/library-transfer.js"></script>
+  <script src="js/markers.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/hot-reload.js"></script>
+</body>
+</html>

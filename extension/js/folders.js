@@ -1,0 +1,16 @@
+(function (global) {
+  'use strict';
+  function error(code,message){var value=new Error(message);value.code=code;throw value;}
+  function storage(){if(!global.PremiereBindStorage)error('STORAGE_UNAVAILABLE','PremiereBind storage is unavailable.');return global.PremiereBindStorage;}
+  function folderId(){return 'folder-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);}
+  function activeProfile(library){return library.profiles.filter(function(profile){return profile.id===library.activeProfileId;})[0]||library.profiles[0];}
+  function isFolder(item){return Boolean(item&&(item.isFolder||Array.isArray(item.presets)));}
+  function notify(library){global.dispatchEvent(new CustomEvent('premierebind:folders-changed',{detail:library}));return library;}
+  function update(mutator){return storage().update(function(library){var profile=activeProfile(library);if(!profile)error('PROFILE_NOT_FOUND','PremiereBind has no active profile.');mutator(profile,library);return library;}).then(notify);}
+  function list(library){var profile=library&&activeProfile(library);return profile?profile.presets.filter(isFolder):[];}
+  function add(name){var title=String(name||'').trim().slice(0,60)||'Untitled folder';return update(function(profile){profile.presets.push({id:folderId(),title:title,isFolder:true,expanded:false,shuffle:false,shuffleBag:[],lastPickedPresetId:'',sequenceIndex:0,shortcut:'',targetMode:'playhead',targetColorId:'',targetName:'',presets:[],children:[],selectionFolders:[],transitions:[]});});}
+  function rename(id,name){var title=String(name||'').trim().slice(0,60);if(!title)return Promise.reject((function(){var value=new Error('Enter a folder name.');value.code='INVALID_FOLDER_NAME';return value;}()));return update(function(profile){var folder=profile.presets.filter(function(item){return isFolder(item)&&item.id===id;})[0];if(!folder)error('FOLDER_NOT_FOUND','That folder no longer exists.');folder.title=title;});}
+  function remove(id){return update(function(profile){var index=-1;for(var i=0;i<profile.presets.length;i++)if(isFolder(profile.presets[i])&&profile.presets[i].id===id){index=i;break;}if(index<0)error('FOLDER_NOT_FOUND','That folder no longer exists.');profile.presets.splice(index,1);});}
+  function patch(id,values){values=values||{};return update(function(profile){var folder=profile.presets.filter(function(item){return isFolder(item)&&item.id===id;})[0];if(!folder)error('FOLDER_NOT_FOUND','That folder no longer exists.');if(typeof values.shuffle==='boolean')folder.shuffle=values.shuffle;if(typeof values.shortcut==='string'){var wanted=values.shortcut.toLowerCase();(profile.presets||[]).forEach(function(item){if(item!==folder&&String(item.shortcut||'').toLowerCase()===wanted)item.shortcut='';if(isFolder(item))(item.presets||[]).forEach(function(preset){if(String(preset.shortcut||'').toLowerCase()===wanted)preset.shortcut='';});});folder.shortcut=values.shortcut;}if(typeof values.targetMode==='string')folder.targetMode=values.targetMode;if(typeof values.targetColorId==='string')folder.targetColorId=values.targetColorId;if(typeof values.targetName==='string')folder.targetName=values.targetName;folder.shuffleBag=[];folder.lastPickedPresetId='';folder.sequenceIndex=0;});}
+  global.PremiereBindFolders={list:list,add:add,rename:rename,remove:remove,patch:patch,isFolder:isFolder};
+})(window);

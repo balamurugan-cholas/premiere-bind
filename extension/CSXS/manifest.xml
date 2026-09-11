@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.premierebind.cep" ExtensionBundleVersion="1.0.0" ExtensionBundleName="PremiereBind">
+  <ExtensionList><Extension Id="com.premierebind.cep.panel" Version="1.0.0"/></ExtensionList>
+  <ExecutionEnvironment>
+    <HostList><Host Name="PPRO" Version="[14.0,99.9]"/></HostList>
+    <LocaleList><Locale Code="All"/></LocaleList>
+    <RequiredRuntimeList><RequiredRuntime Name="CSXS" Version="9.0"/></RequiredRuntimeList>
+  </ExecutionEnvironment>
+  <DispatchInfoList><Extension Id="com.premierebind.cep.panel"><DispatchInfo>
+    <Resources><MainPath>./index.html</MainPath><ScriptPath>./jsx/host.jsx</ScriptPath><CEFCommandLine><Parameter>--allow-file-access-from-files</Parameter></CEFCommandLine></Resources>
+    <Lifecycle><AutoVisible>true</AutoVisible></Lifecycle>
+    <UI><Type>Panel</Type><Menu>PremiereBind</Menu><Geometry>
+      <Size><Height>650</Height><Width>1080</Width></Size>
+      <MinSize><Height>360</Height><Width>380</Width></MinSize>
+    </Geometry></UI>
+  </DispatchInfo></Extension></DispatchInfoList>
+</ExtensionManifest>

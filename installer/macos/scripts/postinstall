@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+APP="/Applications/PremiereBind Companion.app"
+EXT="/Library/Application Support/Adobe/CEP/extensions/com.premierebind.cep"
+chmod 755 "$APP/Contents/MacOS/PremiereBindCompanion"
+xattr -dr com.apple.quarantine "$APP" "$EXT" 2>/dev/null || true
+
+CONSOLE_USER="$(stat -f '%Su' /dev/console)"
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  USER_UID="$(id -u "$CONSOLE_USER")"
+  for VERSION in 9 10 11 12 13 14 15 16 17 18 19 20; do
+    launchctl asuser "$USER_UID" sudo -u "$CONSOLE_USER" defaults write "com.adobe.CSXS.$VERSION" PlayerDebugMode 1 || true
+  done
+  launchctl bootout "gui/$USER_UID/com.premierebind.companion" 2>/dev/null || true
+  launchctl bootstrap "gui/$USER_UID" /Library/LaunchAgents/com.premierebind.companion.plist 2>/dev/null || true
+  launchctl kickstart -k "gui/$USER_UID/com.premierebind.companion" 2>/dev/null || true
+fi
+exit 0
+

@@ -1,0 +1,15 @@
+(function(global){'use strict';
+function fail(code,message){var error=new Error(message);error.code=code;throw error;}
+function storage(){if(!global.PremiereBindStorage)fail('STORAGE_UNAVAILABLE','PremiereBind storage is unavailable.');return global.PremiereBindStorage;}
+function isFolder(item){return Boolean(item&&(item.isFolder||Array.isArray(item.presets)));}
+function active(library){return library.profiles.filter(function(profile){return profile.id===library.activeProfileId;})[0]||library.profiles[0];}
+function locate(profile,id){var found=null;(profile.presets||[]).some(function(item,index){if(!isFolder(item)&&item.id===id){found={item:item,parent:profile.presets,index:index,folder:null};return true;}if(isFolder(item)){var nested=item.presets||[];for(var i=0;i<nested.length;i++)if(nested[i].id===id){found={item:nested[i],parent:nested,index:i,folder:item};return true;}}return false;});return found;}
+function update(id,change){return storage().update(function(library){var profile=active(library),entry=profile&&locate(profile,id);if(!entry)fail('SELECTION_NOT_FOUND','That saved selection no longer exists.');change(entry,profile);return library;}).then(function(library){global.dispatchEvent(new CustomEvent('premierebind:selections-changed',{detail:library}));return library;});}
+function rename(id,title){title=String(title||'').trim().slice(0,100);if(!title)return Promise.reject((function(){var e=new Error('Enter a selection name.');e.code='INVALID_SELECTION_NAME';return e;}()));return update(id,function(entry){entry.item.title=title;});}
+function move(id,folderId){return update(id,function(entry,profile){var destination=folderId?(profile.presets||[]).filter(function(item){return isFolder(item)&&item.id===folderId;})[0]:null;if(folderId&&!destination)fail('FOLDER_NOT_FOUND','That folder no longer exists.');if((entry.folder&&entry.folder.id||'')===(destination&&destination.id||''))return;entry.parent.splice(entry.index,1);if(destination){if(!Array.isArray(destination.presets))destination.presets=[];destination.presets.unshift(entry.item);}else profile.presets.unshift(entry.item);});}
+function remove(id){return update(id,function(entry){entry.parent.splice(entry.index,1);});}
+function setColor(id,color){return update(id,function(entry){entry.item.iconColor=String(color||'#ffffff');});}
+function setTarget(id,target){return update(id,function(entry){entry.item.targetMode=String(target.mode||'playhead');entry.item.targetColorId=String(target.colorId||'');entry.item.targetName=String(target.name||'').trim().slice(0,80);});}
+function setShortcut(id,combo){combo=String(combo||'').trim();return update(id,function(entry,profile){(profile.presets||[]).forEach(function(item){var list=isFolder(item)?item.presets||[]:[item];list.forEach(function(preset){if(preset.id!==id&&String(preset.shortcut||'').toLowerCase()===combo.toLowerCase())preset.shortcut='';});});entry.item.shortcut=combo;});}
+global.PremiereBindSelections={rename:rename,move:move,remove:remove,setColor:setColor,setTarget:setTarget,setShortcut:setShortcut};
+})(window);
