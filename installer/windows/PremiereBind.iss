@@ -20,6 +20,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Files]
 Source: "..\..\dist\windows\helper\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\dist\windows\helper\{#MyAppExeName}"; DestDir: "{userappdata}\Adobe\CEP\extensions\com.premierebind.cep\companion"; Flags: ignoreversion
 Source: "..\..\extension\*"; DestDir: "{userappdata}\Adobe\CEP\extensions\com.premierebind.cep"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]

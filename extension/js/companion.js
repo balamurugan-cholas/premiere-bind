@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var URL='ws://127.0.0.1:50900',socket=null,library=null,reconnectTimer=null,launchAttempted=false,busy={},lastExecuted={},requests={},requestCounter=0;
+  var URL='ws://127.0.0.1:50900',socket=null,library=null,reconnectTimer=null,helperTimer=null,launchAttempted=false,helperPrompted=false,busy={},lastExecuted={},requests={},requestCounter=0;
 
   function status(message){var el=document.getElementById('operation-status');if(el)el.textContent=message;}
   function nativePath(value){
@@ -9,18 +9,23 @@
     return value.replace(/\//g,navigator.platform.indexOf('Win')===0?'\\':'/');
   }
   function extensionPath(){try{return nativePath(global.__adobe_cep__.getSystemPath('extension'));}catch(_){return'';}}
+  function userDataPath(){try{return nativePath(global.__adobe_cep__.getSystemPath('userData'));}catch(_){return'';}}
   function join(root,tail){var slash=navigator.platform.indexOf('Win')===0?'\\':'/';return root.replace(/[\\\/]$/,'')+slash+tail.replace(/[\\\/]/g,slash);}
   function launch(){
-    if(launchAttempted)return;launchAttempted=true;
+    if(launchAttempted)return false;launchAttempted=true;
     var root=extensionPath(),isMac=/Mac/i.test(navigator.platform),bundled=isMac?'companion/macos/PremiereBindCompanion.app/Contents/MacOS/PremiereBindCompanion':'companion/PremiereBindCompanion.exe';
     var development=isMac?'../premiere bind/premierebind-companion/bin/macos/PremiereBindCompanion.app/Contents/MacOS/PremiereBindCompanion':'../premiere bind/premierebind-companion/bin/PremiereBindCompanion.exe';
-    var candidates=[join(root,bundled),join(root,development)];
+    var data=userDataPath(),installed=isMac?'/Applications/PremiereBind Companion.app/Contents/MacOS/PremiereBindCompanion':join(data.replace(/[\\\/]Roaming$/i,''),'Local/Programs/PremiereBind/PremiereBindCompanion.exe');
+    var candidates=[join(root,bundled),installed,join(root,development)];
     try{
       if(global.cep&&global.cep.process&&typeof global.cep.process.createProcess==='function'){
-        for(var i=0;i<candidates.length;i++){var pid=global.cep.process.createProcess(candidates[i]);if(Number(pid)>0)return;}
+        for(var i=0;i<candidates.length;i++){var pid=global.cep.process.createProcess(candidates[i]);if(Number(pid)>0)return true;}
       }
     }catch(_){}
+    return false;
   }
+  function requestHelperPrompt(){if(helperPrompted||socket&&socket.readyState===WebSocket.OPEN)return;helperPrompted=true;status('PremiereBind Companion is not running.');global.dispatchEvent(new CustomEvent('premierebind:companion-required'));}
+  function watchHelper(){if(helperTimer)clearTimeout(helperTimer);helperTimer=setTimeout(function(){if(!socket||socket.readyState!==WebSocket.OPEN)requestHelperPrompt();},5000);}
   function activePresets(value){
     if(!value||!global.PremiereBindLibraryView)return[];
     var presets=global.PremiereBindLibraryView.collect(value,'').map(function(item){return{id:item.id,shortcut:item.shortcut||'',folder:false};}),profile=global.PremiereBindLibraryView.activeProfile(value);(profile&&profile.presets||[]).forEach(function(item){if((item.isFolder||Array.isArray(item.presets))&&item.shortcut)presets.push({id:item.id,shortcut:item.shortcut,folder:true});});presets=presets.filter(function(item){return Boolean(String(item.shortcut||'').trim());});
@@ -70,7 +75,7 @@
   function connect(){
     if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;
     try{socket=new WebSocket(URL);}catch(_){launch();schedule();return;}
-    socket.onopen=function(){launchAttempted=true;status('Global shortcuts ready.');sync();};
+    socket.onopen=function(){launchAttempted=true;helperPrompted=false;if(helperTimer){clearTimeout(helperTimer);helperTimer=null;}status('Global shortcuts ready.');sync();};
     socket.onmessage=function(event){var payload=null;try{payload=JSON.parse(event.data);}catch(_){}if(!payload)return;if(payload.type==='exportProgress'){global.dispatchEvent(new CustomEvent('premierebind:export-progress',{detail:payload}));return;}if(payload.requestId&&requests[payload.requestId]){var pending=requests[payload.requestId];clearTimeout(pending.timer);delete requests[payload.requestId];if(payload.ok===false)pending.reject(new Error(payload.error||'The PremiereBind helper request failed.'));else pending.resolve(payload);return;}if(payload.type==='import_library'){global.dispatchEvent(new CustomEvent('premierebind:external-import',{detail:payload.data}));return;}if(payload.type==='shortcut')execute(payload);};
     socket.onclose=function(){socket=null;Object.keys(requests).forEach(function(id){clearTimeout(requests[id].timer);requests[id].reject(new Error('The PremiereBind helper disconnected.'));delete requests[id];});launch();schedule();};
     socket.onerror=function(){};
@@ -82,9 +87,9 @@
     return Boolean(wanted)&&activePresets(library).some(function(item){return normalizedCombo(item.shortcut)===wanted;});
   }
   ['premierebind:library-ready','premierebind:profiles-changed','premierebind:folders-changed','premierebind:selections-changed','premierebind:settings-changed','premierebind:randomizers-changed'].forEach(function(name){global.addEventListener(name,function(event){accept(event.detail);});});
-  global.addEventListener('beforeunload',function(){if(reconnectTimer)clearTimeout(reconnectTimer);if(socket)socket.close();});
-  global.PremiereBindCompanion={nativeClipboard:function(action,token){return request("premiereClipboardShortcut",{action:action,clipboardToken:token},10000);},analyzeAudioBeats:function(mediaPath,sensitivity){return request('analyzeAudioBeats',{mediaPath:mediaPath,sensitivity:sensitivity||'balanced'},120000);},connect:connect,sync:accept,activePresets:activePresets,handles:handles,readProjectTransitionMetadata:function(projectPath,sequenceGuid,sequenceName){return request('readProjectTransitionMetadata',{projectPath:projectPath,sequenceGuid:sequenceGuid||'',sequenceName:sequenceName||''},30000);},exportLibraryZip:function(outputPath,libraryData,mediaPaths){return request('exportLibraryZip',{outputPath:outputPath,libraryData:libraryData,mediaPaths:mediaPaths||[]},30*60*1000);},importLibraryZip:function(inputPath){return request('importLibraryZip',{inputPath:inputPath},30*60*1000).then(function(result){return result.data;});}};
-  connect();
+  global.addEventListener('beforeunload',function(){if(reconnectTimer)clearTimeout(reconnectTimer);if(helperTimer)clearTimeout(helperTimer);if(socket)socket.close();});
+  global.PremiereBindCompanion={start:function(){helperPrompted=false;launchAttempted=false;launch();connect();watchHelper();return waitForConnection(10000);},nativeClipboard:function(action,token){return request("premiereClipboardShortcut",{action:action,clipboardToken:token},10000);},analyzeAudioBeats:function(mediaPath,sensitivity){return request('analyzeAudioBeats',{mediaPath:mediaPath,sensitivity:sensitivity||'balanced'},120000);},connect:connect,sync:accept,activePresets:activePresets,handles:handles,readProjectTransitionMetadata:function(projectPath,sequenceGuid,sequenceName){return request('readProjectTransitionMetadata',{projectPath:projectPath,sequenceGuid:sequenceGuid||'',sequenceName:sequenceName||''},30000);},exportLibraryZip:function(outputPath,libraryData,mediaPaths){return request('exportLibraryZip',{outputPath:outputPath,libraryData:libraryData,mediaPaths:mediaPaths||[]},30*60*1000);},importLibraryZip:function(inputPath){return request('importLibraryZip',{inputPath:inputPath},30*60*1000).then(function(result){return result.data;});}};
+  connect();launch();watchHelper();
 })(window);
 
 
