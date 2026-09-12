@@ -170,7 +170,14 @@ private final class PremiereBindCompanion {
             send(["type": "companionStatus", "status": "accessibility-permission-required"], on: connection)
             return
         }
-        guard let premiere = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.adobe.PremierePro" }) else {
+        guard let premiere = NSWorkspace.shared.runningApplications.first(where: { application in
+            let bundleId = (application.bundleIdentifier ?? "").lowercased()
+            let name = (application.localizedName ?? "").lowercased()
+            return bundleId.hasPrefix("com.adobe.premierepro")
+                || name == "adobe premiere"
+                || name == "adobe premiere pro"
+                || name.hasPrefix("adobe premiere pro ")
+        }) else {
             send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": false, "error": "Premiere Pro is not running."], on: connection)
             return
         }
