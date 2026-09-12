@@ -124,21 +124,23 @@
     insertionStart=Math.max(0,insertionStart);
     (host._applyGeneralSmartTracks||host._applySmartTracks)(target,items,insertionStart);
     var existing=clips(target);for(var e=0;e<existing.length;e++)try{existing[e].clip.setSelected(false,true);}catch(_){}
-    var vBase = -1, aBase = -1;
+    var destinationTracks={video:{},audio:{}};
     for (var i = 0; i < items.length; i++) {
       var track = Number(items[i]._smartTrackIndex);
-      if (items[i].type === "audio") aBase = aBase < 0 ? track : Math.min(aBase, track);
-      else vBase = vBase < 0 ? track : Math.min(vBase, track);
+      if (items[i].type === "audio") destinationTracks.audio[String(track)]=true;
+      else destinationTracks.video[String(track)]=true;
     }
-    for (i = 0; i < target.videoTracks.numTracks; i++) target.videoTracks[i].setTargeted(i === vBase, true);
-    for (i = 0; i < target.audioTracks.numTracks; i++) target.audioTracks[i].setTargeted(i === aBase, true);
+    // Premiere maps each copied source track onto the corresponding targeted
+    // destination track. Targeting only the lowest track makes upper layers
+    // spill into newly-created tracks on macOS.
+    for (i = 0; i < target.videoTracks.numTracks; i++) target.videoTracks[i].setTargeted(Boolean(destinationTracks.video[String(i)]), true);
+    for (i = 0; i < target.audioTracks.numTracks; i++) target.audioTracks[i].setTargeted(Boolean(destinationTracks.audio[String(i)]), true);
     // Native Paste can prefer Premiere's source-patch mapping over track
     // targeting. Temporarily lock every non-destination track so clipboard
     // inserts (True Nests and exact-transition selections) cannot overwrite
     // an occupied original track. The exact prior lock state is restored as
     // soon as Paste is verified or cancelled.
-    var priorLocks=trackLocks(target),allowed={video:{},audio:{}},kind,list,t;
-    for(i=0;i<items.length;i++){kind=items[i].type==="audio"?"audio":"video";allowed[kind][String(items[i]._smartTrackIndex)]=true;}
+    var priorLocks=trackLocks(target),allowed=destinationTracks,kind,list,t;
     for(kind in allowed){list=kind==="video"?target.videoTracks:target.audioTracks;for(t=0;t<list.numTracks;t++)if(typeof list[t].setLocked==="function")list[t].setLocked(allowed[kind][String(t)]?0:1);}
     target.setPlayerPosition(String(Math.round(insertionStart * 254016000000)));
     var actual = host._timeData(target.getPlayerPosition()).seconds;
