@@ -25,6 +25,7 @@ rm -rf "$ROOT/dist/macos/root/Library/Application Support/Adobe/CEP/extensions/c
 mkdir -p "$ROOT/dist/macos/root/Library/LaunchAgents"
 cp "$ROOT/installer/macos/com.premierebind.companion.plist" "$ROOT/dist/macos/root/Library/LaunchAgents/com.premierebind.companion.plist"
 
+chmod +x "$ROOT/installer/macos/scripts/preinstall" "$ROOT/installer/macos/scripts/postinstall"
 pkgbuild --root "$ROOT/dist/macos/root" --scripts "$ROOT/installer/macos/scripts" --identifier com.premierebind.installer --version 1.0.0 --install-location / "$ROOT/dist/macos/PremiereBind-component.pkg"
 productbuild --distribution "$ROOT/installer/macos/distribution.xml" --resources "$ROOT/installer/macos" --package-path "$ROOT/dist/macos" "$ROOT/dist/PremiereBind-1.0.0-macOS-Universal.pkg"
 

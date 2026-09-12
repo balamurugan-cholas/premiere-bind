@@ -57,6 +57,9 @@ private final class PremiereBindCompanion {
         listener.stateUpdateHandler = { state in
             if case .failed(let error) = state {
                 NSLog("[PremiereBind Companion] Local WebSocket listener failed: %@", String(describing: error))
+                DispatchQueue.main.async {
+                    NSApplication.shared.terminate(nil)
+                }
             }
         }
         self.listener = listener

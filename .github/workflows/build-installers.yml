@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build universal macOS installer
         run: |
-          chmod +x companion/macos/build.sh installer/macos/scripts/postinstall
+          chmod +x companion/macos/build.sh installer/macos/scripts/preinstall installer/macos/scripts/postinstall
           companion/macos/build.sh
           lipo -archs "dist/macos/root/Applications/PremiereBind Companion.app/Contents/MacOS/PremiereBindCompanion"
           pkgutil --check-signature dist/PremiereBind-1.0.0-macOS-Universal.pkg || true

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+# A running copy keeps the old executable and local WebSocket server alive
+# while macOS replaces the app bundle. Stop every installed copy first so the
+# newly installed companion is the only process that can own port 50900.
+CONSOLE_USER="$(stat -f '%Su' /dev/console)"
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  USER_UID="$(id -u "$CONSOLE_USER")"
+  launchctl bootout "gui/$USER_UID/com.premierebind.companion" 2>/dev/null || true
+  pkill -u "$USER_UID" -f '/Applications/PremiereBind Companion.app/Contents/MacOS/PremiereBindCompanion' 2>/dev/null || true
+fi
+sleep 1
+exit 0
