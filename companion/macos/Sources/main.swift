@@ -154,6 +154,9 @@ private final class PremiereBindCompanion {
         case "premiereClipboardShortcut":
             sendPremiereClipboardShortcut(object, to: connection)
 
+        case "openAccessibilitySettings":
+            openAccessibilitySettings(object, to: connection)
+
         default:
             break
         }
@@ -162,6 +165,11 @@ private final class PremiereBindCompanion {
     private func sendPremiereClipboardShortcut(_ message: [String: Any], to connection: NWConnection) {
         let requestId = message["requestId"] as? String ?? ""
         let action = message["action"] as? String ?? ""
+        guard AXIsProcessTrusted() else {
+            send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": false, "error": "Allow PremiereBind Companion in System Settings → Privacy & Security → Accessibility, then try again."], on: connection)
+            send(["type": "companionStatus", "status": "accessibility-permission-required"], on: connection)
+            return
+        }
         guard let premiere = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.adobe.PremierePro" }) else {
             send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": false, "error": "Premiere Pro is not running."], on: connection)
             return
@@ -179,7 +187,10 @@ private final class PremiereBindCompanion {
             up?.flags = .maskShift
             down?.post(tap: .cghidEventTap)
             up?.post(tap: .cghidEventTap)
-            send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": true, "action": action], on: connection)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self, weak connection] in
+                guard let self, let connection else { return }
+                self.send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": true, "action": action], on: connection)
+            }
             return
         default:
             send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": false, "error": "Unsupported clipboard action."], on: connection)
@@ -192,9 +203,20 @@ private final class PremiereBindCompanion {
         up?.flags = .maskCommand
         down?.post(tap: .cghidEventTap)
         up?.post(tap: .cghidEventTap)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self, weak connection] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self, weak connection] in
             guard let self, let connection else { return }
-            self.send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": true, "action": action], on: connection)
+            self.send(["type": "premiereClipboardShortcutResult", "requestId": requestId, "ok": true, "action": action, "clipboardChanged": action.lowercased() == "copy"], on: connection)
+        }
+    }
+
+    private func openAccessibilitySettings(_ message: [String: Any], to connection: NWConnection) {
+        let requestId = message["requestId"] as? String ?? ""
+        _ = requestAccessibilityPermission()
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        DispatchQueue.main.async { [weak self, weak connection] in
+            guard let self, let connection else { return }
+            let opened = NSWorkspace.shared.open(url)
+            self.send(["type": "openAccessibilitySettingsResult", "requestId": requestId, "ok": opened, "error": opened ? "" : "macOS could not open Accessibility settings."], on: connection)
         }
     }
 

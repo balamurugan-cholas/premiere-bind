@@ -27,3 +27,10 @@ cp "$ROOT/installer/macos/com.premierebind.companion.plist" "$ROOT/dist/macos/ro
 
 pkgbuild --root "$ROOT/dist/macos/root" --scripts "$ROOT/installer/macos/scripts" --identifier com.premierebind.installer --version 1.0.0 --install-location / "$ROOT/dist/macos/PremiereBind-component.pkg"
 productbuild --distribution "$ROOT/installer/macos/distribution.xml" --resources "$ROOT/installer/macos" --package-path "$ROOT/dist/macos" "$ROOT/dist/PremiereBind-1.0.0-macOS-Universal.pkg"
+
+DMG_SOURCE="$ROOT/dist/macos/dmg"
+rm -rf "$DMG_SOURCE"
+mkdir -p "$DMG_SOURCE"
+cp "$ROOT/dist/PremiereBind-1.0.0-macOS-Universal.pkg" "$DMG_SOURCE/PremiereBind Installer.pkg"
+cp "$ROOT/installer/macos/README.txt" "$DMG_SOURCE/READ ME - macOS.txt"
+hdiutil create -volname "PremiereBind 1.0.0" -srcfolder "$DMG_SOURCE" -ov -format UDZO "$ROOT/dist/PremiereBind-1.0.0-macOS-Universal.dmg"

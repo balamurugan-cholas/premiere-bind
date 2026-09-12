@@ -657,6 +657,7 @@ PremiereBindHost._applySmartTracks = function (sequence, items, insertionStart) 
   }
   if (!hasRandomizerTargets) return PremiereBindHost._applyGeneralSmartTracks(sequence, items, insertionStart);
 
+  PremiereBindHost._applyGeneralSmartTracks(sequence, items, insertionStart);
   var reservations = { video:{}, audio:{} };
   var reserve = function (kind, trackIndex, start, end) {
     var key = String(trackIndex);
@@ -672,35 +673,43 @@ PremiereBindHost._applySmartTracks = function (sequence, items, insertionStart) 
     }
     return false;
   };
+  var nearestFree = function (kind, preferred, start, end) {
+    preferred = Math.max(0, Number(preferred) || 0);
+    if (!collides(kind, preferred, start, end)) return preferred;
+    var tracks = kind === "audio" ? sequence.audioTracks : sequence.videoTracks;
+    var count = Number(tracks && tracks.numTracks || 0);
+    for (var distance = 1; distance <= count + preferred + 1; distance++) {
+      var above = preferred + distance;
+      if (above < count && !collides(kind, above, start, end)) return above;
+      var below = preferred - distance;
+      if (below >= 0 && !collides(kind, below, start, end)) return below;
+    }
+    return count;
+  };
 
   for (index = 0; index < items.length; index++) {
     var fixed = items[index] || {}, fixedKind = fixed.type === "audio" ? "audio" : "video", fixedSource = fixed.source || {};
     var fixedPolicy = String(fixedSource.randomizerTargetTrack || "").toUpperCase();
-    if (fixedPolicy && fixedPolicy !== "ORIGINAL") continue;
-    var fixedTrack = Math.max(0, Number(fixedSource.trackIndex));
-    if (!isFinite(fixedTrack)) fixedTrack = Math.max(0, Number(fixed.trackIndex) || 0);
-    fixed._smartTrackIndex = fixedTrack;
+    if (fixedPolicy === "SMART") continue;
+    var fixedTrack = typeof fixed._smartTrackIndex === "number" ? fixed._smartTrackIndex : Math.max(0, Number(fixed.trackIndex) || 0);
+    if (fixedPolicy === "ORIGINAL") fixedTrack = Math.max(0, Number(fixedSource.trackIndex));
+    else if (fixedPolicy) {
+      var fixedPrefix = fixedKind === "audio" ? "A" : "V";
+      var fixedMatch = fixedPolicy.match(new RegExp("^" + fixedPrefix + "([1-9][0-9]*)$"));
+      if (fixedMatch) fixedTrack = Number(fixedMatch[1]) - 1;
+    }
     var fixedStart = insertionStart + (Number(fixed.relativeStart) || 0);
+    if (fixedPolicy) fixedTrack = nearestFree(fixedKind, fixedTrack, fixedStart, fixedStart + Math.max(Number(fixed.duration) || 0, 0.000001));
+    PremiereBindHost._ensureTrackCounts(sequence, fixedKind === "video" ? fixedTrack + 1 : 0, fixedKind === "audio" ? fixedTrack + 1 : 0);
+    fixed._smartTrackIndex = fixedTrack;
     reserve(fixedKind, fixedTrack, fixedStart, fixedStart + Math.max(Number(fixed.duration) || 0, 0.000001));
   }
 
   for (index = 0; index < items.length; index++) {
     var item = items[index] || {}, kind = item.type === "audio" ? "audio" : "video", source = item.source || {};
     var policy = String(source.randomizerTargetTrack || "").toUpperCase();
-    if (!policy || policy === "ORIGINAL") continue;
-    var prefix = kind === "audio" ? "A" : "V", requested = 0;
-    if (policy !== "SMART") {
-      var match = policy.match(new RegExp("^" + prefix + "([1-9][0-9]*)$"));
-      if (!match) {
-        item._smartTrackIndex = Math.max(0, Number(source.trackIndex) || Number(item.trackIndex) || 0);
-        continue;
-      }
-      requested = Number(match[1]) - 1;
-      var available = Number((kind === "audio" ? sequence.audioTracks : sequence.videoTracks).numTracks || 0);
-      if (requested >= available) throw new Error("Randomizer target " + policy + " is not available in this sequence. Add that " + kind + " track or choose a different target.");
-    }
-    var start = insertionStart + (Number(item.relativeStart) || 0), end = start + Math.max(Number(item.duration) || 0, 0.000001), target = requested;
-    while (collides(kind, target, start, end)) target++;
+    if (policy !== "SMART") continue;
+    var start = insertionStart + (Number(item.relativeStart) || 0), end = start + Math.max(Number(item.duration) || 0, 0.000001), target = nearestFree(kind, 0, start, end);
     PremiereBindHost._ensureTrackCounts(sequence, kind === "video" ? target + 1 : 0, kind === "audio" ? target + 1 : 0);
     item._smartTrackIndex = target;
     reserve(kind, target, start, end);
@@ -717,7 +726,7 @@ PremiereBindHost.insertPresetAtPlayhead = function (payload) {
   var duration = Math.max(0, Number(payload.duration) || 0);
   var anchor = Math.max(0, Math.min(duration, Number(payload.anchor) || 0));
   var insertionStart = playhead - anchor;
-  PremiereBindHost._applyGeneralSmartTracks(sequence,items,insertionStart);
+  PremiereBindHost._applySmartTracks(sequence,items,insertionStart);
 
   var plans = [];
   var root = app.project.rootItem;

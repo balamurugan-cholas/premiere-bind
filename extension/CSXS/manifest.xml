@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.premierebind.cep" ExtensionBundleVersion="1.0.0" ExtensionBundleName="PremiereBind">
-  <ExtensionList><Extension Id="com.premierebind.cep.panel" Version="1.0.0"/></ExtensionList>
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.premierebind.cep" ExtensionBundleVersion="0.1.0" ExtensionBundleName="PremiereBind">
+  <ExtensionList><Extension Id="com.premierebind.cep.panel" Version="0.1.0"/></ExtensionList>
   <ExecutionEnvironment>
     <HostList><Host Name="PPRO" Version="[14.0,99.9]"/></HostList>
     <LocaleList><Locale Code="All"/></LocaleList>

@@ -37,10 +37,11 @@ jobs:
           companion/macos/build.sh
           lipo -archs "dist/macos/root/Applications/PremiereBind Companion.app/Contents/MacOS/PremiereBindCompanion"
           pkgutil --check-signature dist/PremiereBind-1.0.0-macOS-Universal.pkg || true
+          hdiutil verify dist/PremiereBind-1.0.0-macOS-Universal.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: PremiereBind-macOS-Universal
-          path: dist/PremiereBind-1.0.0-macOS-Universal.pkg
+          path: dist/PremiereBind-1.0.0-macOS-Universal.dmg
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -57,4 +58,4 @@ jobs:
           body: |
             PremiereBind 1.0.0 installers for Windows and macOS.
 
-            macOS: the installer is unsigned. If macOS blocks it, open System Settings → Privacy & Security, click Open Anyway, then open the installer again. On first launch, approve PremiereBind Companion under Privacy & Security → Accessibility when macOS asks; this enables global shortcuts and native timeline copy/paste. Everything else is automatic.
+            macOS: open the DMG, then run PremiereBind Installer.pkg. The installer is unsigned. If macOS blocks it, open System Settings → Privacy & Security, click Open Anyway, then run it again. On first launch, approve PremiereBind Companion under Privacy & Security → Accessibility when macOS asks; this enables global shortcuts and native timeline copy/paste. Everything else is automatic.
